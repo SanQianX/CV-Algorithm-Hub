@@ -81,7 +81,10 @@
       "Bash(wsl --unregister:*)",
       "Bash(git add:*)",
       "Bash(cmd.exe:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git reset)",
+      "Bash(git remote add:*)",
+      "Bash(git remote set-url:*)"
     ]
   }
 }

@@ -140,3 +140,10 @@ models/
 # Data
 data/
 !data/.gitkeep
+
+# Web UI
+node_modules/
+dist/
+build/
+.env.local
+.env.*.local
