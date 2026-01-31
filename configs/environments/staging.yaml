@@ -1,0 +1,69 @@
+# CV Algorithm Hub - Staging Configuration
+# Copy this file to staging.yaml and modify values as needed
+
+app:
+  name: "CV Algorithm Hub"
+  version: "1.0.0"
+  environment: "staging"
+
+# Database Configuration (PostgreSQL)
+database:
+  host: "postgres"
+  port: 5432
+  username: "postgres"
+  password: "${POSTGRES_PASSWORD}"
+  name: "cv_algorithm_hub_staging"
+  pool_size: 20
+  max_overflow: 40
+
+# Redis Configuration (Cache & Queue)
+redis:
+  host: "redis"
+  port: 6379
+  db: 0
+  password: "${REDIS_PASSWORD}"
+
+# RabbitMQ Configuration (Message Queue)
+rabbitmq:
+  host: "rabbitmq"
+  port: 5672
+  username: "${RABBITMQ_USER}"
+  password: "${RABBITMQ_PASSWORD}"
+  virtual_host: "/"
+
+# GPU Configuration
+gpu:
+  enabled: true
+  device_id: 0
+  memory_limit: 8192  # 8GB limit
+  cuda_version: "11.8"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: "./logs/staging.log"
+
+# Security Configuration
+security:
+  secret_key: "${JWT_SECRET_KEY}"
+  algorithm: "HS256"
+  access_token_expire_minutes: 60
+
+# CORS Configuration
+cors_origins:
+  - "https://staging.cvhub.example.com"
+  - "http://staging.cvhub.example.com:3000"
+
+# Path Configuration
+paths:
+  data_dir: "/data/staging"
+  models_dir: "/models/staging"
+  temp_dir: "/temp/staging"
+
+# Feature Flags
+features:
+  enable_authentication: true
+  enable_monitoring: true
+  enable_gpu_acceleration: true
+  max_concurrent_tasks: 8

@@ -1,0 +1,211 @@
+# ============================================
+# CV Algorithm Hub - Production Configuration
+# ============================================
+# Features:
+# - Multi-machine distributed deployment
+# - GPU resource scheduling
+# - Monitoring and logging collection
+# - Blue-green deployment support
+# - High availability configuration
+# ============================================
+# WARNING: Never commit this file with real credentials!
+# ============================================
+
+app:
+  name: "CV Algorithm Hub"
+  version: "1.0.0"
+  environment: "production"
+
+# Deployment Mode
+deployment:
+  mode: "distributed"  # distributed or standalone
+  replicas:
+    api-gateway: 2
+    algorithm-manager: 2
+    task-orchestrator: 3
+    algorithm-engine: 2
+    data-manager: 2
+    monitoring: 1
+    web-ui: 2
+  health_check:
+    interval: 30
+    timeout: 10
+    retries: 5
+
+# GPU Resource Scheduling
+gpu_scheduling:
+  enabled: true
+  strategy: "share"  # share, exclusive, or MIG
+  resources:
+    - device_id: 0
+      max_tasks: 4
+      memory_limit_mb: 8192
+    - device_id: 1
+      max_tasks: 4
+      memory_limit_mb: 8192
+  cuda_version: "11.8"
+  cudnn_version: "8.6.0"
+
+# Blue-Green Deployment
+blue_green:
+  enabled: true
+  current_color: "blue"
+  swap_timeout: 60
+  health_check_path: "/health"
+  rollback_on_failure: true
+
+# Database Configuration (PostgreSQL - HA)
+database:
+  host: "${POSTGRES_HOST}"
+  port: 5432
+  username: "${POSTGRES_USER}"
+  password: "${POSTGRES_PASSWORD}"
+  name: "${POSTGRES_DB}"
+  pool_size: 50
+  max_overflow: 100
+  # Connection pool settings
+  pool_timeout: 30
+  pool_recycle: 1800
+  # Read replicas (optional)
+  read_replicas:
+    - host: "${POSTGRES_READ_REPLICA_HOST}"
+      port: 5432
+
+# Redis Configuration (Cluster mode)
+redis:
+  host: "${REDIS_HOST}"
+  port: 6379
+  db: 0
+  password: "${REDIS_PASSWORD}"
+  # Cluster mode
+  cluster:
+    enabled: true
+    nodes:
+      - host: "${REDIS_NODE_1}"
+      - host: "${REDIS_NODE_2}"
+      - host: "${REDIS_NODE_3}"
+  # Sentinel for failover
+  sentinel:
+    enabled: true
+    master_name: "mymaster"
+
+# RabbitMQ Configuration (Cluster mode)
+rabbitmq:
+  host: "${RABBITMQ_HOST}"
+  port: 5672
+  username: "${RABBITMQ_USER}"
+  password: "${RABBITMQ_PASSWORD}"
+  virtual_host: "/"
+  # Cluster nodes
+  cluster:
+    enabled: true
+    nodes:
+      - host: "${RABBITMQ_NODE_1}"
+      - host: "${RABBITMQ_NODE_2}"
+      - host: "${RABBITMQ_NODE_3}"
+  # High availability queues
+  ha:
+    enabled: true
+    mode: "all"
+    sync_interval: 5
+
+# GPU Configuration
+gpu:
+  enabled: true
+  visible_devices: "0,1"
+  memory_limit: 16384  # 16GB per GPU
+  cuda_visible_devices: "0,1"
+  nvidia_driver_version: "525.0"
+
+# Monitoring Configuration
+monitoring:
+  enabled: true
+  metrics:
+    export_interval: 15
+    prometheus_enabled: true
+  logging:
+    level: "WARNING"
+    format: "json"
+    elk_enabled: true  # Send logs to ELK stack
+    loki_enabled: true  # Send logs to Loki
+  alerting:
+    enabled: true
+    webhook_url: "${ALERT_WEBHOOK_URL}"
+    prometheus_alerts: true
+  tracing:
+    enabled: true
+    jaeger_enabled: true
+    sample_rate: 0.1
+
+# Logging Configuration
+logging:
+  level: "WARNING"
+  format: "json"
+  # File logging
+  file:
+    enabled: true
+    path: "/var/log/cvhub"
+    max_size_mb: 100
+    backup_count: 10
+  # Structured logging
+  structured: true
+
+# Security Configuration
+security:
+  secret_key: "${JWT_SECRET_KEY}"
+  algorithm: "HS256"
+  access_token_expire_minutes: 30
+  # Rate limiting
+  rate_limit:
+    enabled: true
+    requests_per_minute: 1000
+  # SSL/TLS
+  tls:
+    enabled: true
+    cert_path: "/etc/ssl/certs/cvhub.crt"
+    key_path: "/etc/ssl/private/cvhub.key"
+
+# CORS Configuration
+cors_origins:
+  - "https://cvhub.example.com"
+  - "https://www.cvhub.example.com"
+  - "https://api.cvhub.example.com"
+
+# Path Configuration
+paths:
+  data_dir: "/data/production"
+  models_dir: "/models/production"
+  temp_dir: "/temp/production"
+
+# Feature Flags
+features:
+  hot_reload: false
+  enable_authentication: true
+  enable_monitoring: true
+  enable_gpu_acceleration: true
+  enable_test_data: false
+  max_concurrent_tasks: 16
+
+# Resource Limits
+resources:
+  cpu:
+    api_gateway: "500m"
+    algorithm_manager: "500m"
+    task_orchestrator: "1000m"
+    algorithm_engine: "2000m"
+    data_manager: "500m"
+    monitoring: "250m"
+  memory:
+    api_gateway: "512Mi"
+    algorithm_manager: "512Mi"
+    task_orchestrator: "1Gi"
+    algorithm_engine: "4Gi"
+    data_manager: "512Mi"
+    monitoring: "256Mi"
+
+# High Availability
+ha:
+  enabled: true
+  health_check_interval: 10
+  failover_threshold: 3
+  replica_count: 2

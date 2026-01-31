@@ -1,0 +1,387 @@
+version: '3.8'
+
+# ============================================
+# CV Algorithm Hub - Docker Compose Configuration
+# Supports both development and production environments
+# ============================================
+
+# Default network for container communication
+networks:
+  cvhub-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+
+services:
+  # Nginx - Reverse Proxy & Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: cvhub-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - api-gateway
+      - web-ui
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.10
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles: [dev, prod]
+
+  # API Gateway - Unified Entry Point
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/api-gateway.Dockerfile
+    container_name: cvhub-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - CVHUB_ENVIRONMENT=${CVHUB_ENVIRONMENT:-development}
+      - CVHUB_DATABASE_HOST=postgres
+      - CVHUB_REDIS_HOST=redis
+      - CVHUB_RABBITMQ_HOST=rabbitmq
+      - IN_DOCKER=true
+    env_file:
+      - .env
+    volumes:
+      - K:/data/database_manager/config:/app/config:ro
+      - K:/data/database_manager/metadata:/app/metadata:rw
+      - K:/data/databases/finance:/app/data:rw
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.20
+    restart: unless-stopped
+    profiles: [dev, prod]
+
+  # Algorithm Manager - Algorithm Management
+  algorithm-manager:
+    build:
+      context: .
+      dockerfile: docker/algorithm-manager.Dockerfile
+    container_name: cvhub-algorithm-manager
+    ports:
+      - "8081:8081"
+    environment:
+      - CVHUB_ENVIRONMENT=${CVHUB_ENVIRONMENT:-development}
+      - CVHUB_DATABASE_HOST=postgres
+      - CVHUB_REDIS_HOST=redis
+    env_file:
+      - .env
+    volumes:
+      - algorithm-storage:/app/storage
+      - model-storage:/app/models
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.21
+    restart: unless-stopped
+    profiles: [dev, prod]
+
+  # Task Orchestrator - Task Scheduling
+  task-orchestrator:
+    build:
+      context: .
+      dockerfile: docker/task-orchestrator.Dockerfile
+    container_name: cvhub-task-orchestrator
+    ports:
+      - "8082:8082"
+    environment:
+      - CVHUB_ENVIRONMENT=${CVHUB_ENVIRONMENT:-development}
+      - CVHUB_DATABASE_HOST=postgres
+      - CVHUB_REDIS_HOST=redis
+      - CVHUB_RABBITMQ_HOST=rabbitmq
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.22
+    restart: unless-stopped
+    profiles: [dev, prod]
+
+  # Algorithm Engine - GPU-enabled Execution
+  algorithm-engine:
+    build:
+      context: .
+      dockerfile: docker/algorithm-engine.Dockerfile
+    container_name: cvhub-algorithm-engine
+    ports:
+      - "8083:8083"
+    environment:
+      - CVHUB_ENVIRONMENT=${CVHUB_ENVIRONMENT:-development}
+      - CVHUB_GPU_ENABLED=${CVHUB_GPU_ENABLED:-false}
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-0}
+    env_file:
+      - .env
+    volumes:
+      - data-storage:/app/data
+      - model-storage:/app/models
+      - temp-storage:/app/temp
+      - uploads:/app/uploads
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on:
+      redis:
+        condition: service_started
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.23
+    restart: unless-stopped
+    profiles: [dev, prod]
+
+  # Data Manager - Data Flow Management
+  data-manager:
+    build:
+      context: .
+      dockerfile: docker/data-manager.Dockerfile
+    container_name: cvhub-data-manager
+    ports:
+      - "8084:8084"
+    environment:
+      - CVHUB_ENVIRONMENT=${CVHUB_ENVIRONMENT:-development}
+      - CVHUB_DATABASE_HOST=postgres
+      - CVHUB_REDIS_HOST=redis
+    env_file:
+      - .env
+    volumes:
+      - data-storage:/app/data
+      - temp-storage:/app/temp
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.24
+    restart: unless-stopped
+    profiles: [dev, prod]
+
+  # Monitoring - Monitoring & Analysis
+  monitoring:
+    build:
+      context: .
+      dockerfile: docker/monitoring.Dockerfile
+    container_name: cvhub-monitoring
+    ports:
+      - "8085:8085"
+    environment:
+      - CVHUB_ENVIRONMENT=${CVHUB_ENVIRONMENT:-development}
+      - CVHUB_DATABASE_HOST=postgres
+      - CVHUB_REDIS_HOST=redis
+    env_file:
+      - .env
+    volumes:
+      - monitoring-data:/app/data
+      - ./logs:/app/logs:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.25
+    restart: unless-stopped
+    profiles: [dev, prod]
+
+  # Web UI - Frontend Application
+  web-ui:
+    build:
+      context: ./src/web-ui
+      dockerfile: Dockerfile
+    container_name: cvhub-web-ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.26
+    restart: unless-stopped
+    profiles: [dev, prod]
+
+  # PostgreSQL - Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: cvhub-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=cv_algorithm_hub
+    env_file:
+      - .env
+    volumes:
+      - K:/data/databases/users/postgres:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.100
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles: [dev, prod]
+
+  # Redis - Cache & Queue
+  redis:
+    image: redis:7-alpine
+    container_name: cvhub-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.101
+    restart: unless-stopped
+    profiles: [dev, prod]
+
+  # RabbitMQ - Message Queue
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: cvhub-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    env_file:
+      - .env
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.102
+    restart: unless-stopped
+    profiles: [dev, prod]
+
+  # Prometheus - Metrics Collection (Production only)
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: cvhub-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-storage:/prometheus
+      - ./logs:/var/log/cvhub:ro
+    ports:
+      - "9090:9090"
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.110
+    restart: unless-stopped
+    profiles: [prod]
+
+  # Grafana - Dashboard (Production only)
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: cvhub-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.111
+    restart: unless-stopped
+    profiles: [prod]
+
+  # Elasticsearch - Log Storage (Production only)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+    container_name: cvhub-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.112
+    restart: unless-stopped
+    profiles: [prod]
+
+  # Kibana - Log Visualization (Production only)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10.0
+    container_name: cvhub-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      cvhub-network:
+        ipv4_address: 172.28.0.113
+    restart: unless-stopped
+    profiles: [prod]
+
+# Persistent storage volumes
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  data-storage:
+  model-storage:
+  temp-storage:
+  algorithm-storage:
+  uploads:
+  monitoring-data:
+  grafana-storage:
+  prometheus-storage:
+  elasticsearch-data:

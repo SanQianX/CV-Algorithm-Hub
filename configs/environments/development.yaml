@@ -1,0 +1,142 @@
+# ============================================
+# CV Algorithm Hub - Development Configuration
+# ============================================
+# Features:
+# - Docker Compose one-click startup
+# - Hot reload for rapid development
+# - Preloaded test data
+# - Debug logging enabled
+# - GPU support (optional)
+# ============================================
+
+app:
+  name: "CV Algorithm Hub"
+  version: "1.0.0"
+  environment: "development"
+
+# Docker Compose Services
+services:
+  nginx:
+    enabled: true
+    port: 80
+
+  api-gateway:
+    enabled: true
+    port: 8080
+    hot_reload: true
+
+  algorithm-manager:
+    enabled: true
+    port: 8081
+    hot_reload: true
+
+  task-orchestrator:
+    enabled: true
+    port: 8082
+    hot_reload: true
+
+  algorithm-engine:
+    enabled: true
+    port: 8083
+    hot_reload: true
+    gpu_enabled: false  # Set to true if GPU available
+
+  data-manager:
+    enabled: true
+    port: 8084
+    hot_reload: true
+
+  monitoring:
+    enabled: true
+    port: 8085
+    hot_reload: true
+
+  web-ui:
+    enabled: true
+    port: 3000
+    hot_reload: true
+
+  postgres:
+    enabled: true
+    port: 5432
+
+  redis:
+    enabled: true
+    port: 6379
+
+  rabbitmq:
+    enabled: true
+    port: 5672
+    management_port: 15672
+
+# Database Configuration (PostgreSQL)
+database:
+  host: "postgres"
+  port: 5432
+  username: "postgres"
+  password: "postgres"
+  name: "cv_algorithm_hub_dev"
+  pool_size: 10
+  max_overflow: 20
+
+# Redis Configuration (Cache & Queue)
+redis:
+  host: "redis"
+  port: 6379
+  db: 0
+  password: null
+
+# RabbitMQ Configuration (Message Queue)
+rabbitmq:
+  host: "rabbitmq"
+  port: 5672
+  username: "guest"
+  password: "guest"
+  virtual_host: "/"
+
+# GPU Configuration
+gpu:
+  enabled: false  # Enable for local GPU development
+  device_id: 0
+  memory_limit: 0  # 0 = no limit
+  cuda_version: "11.8"
+
+# Logging Configuration
+logging:
+  level: "DEBUG"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: "./logs/development.log"
+
+# Security Configuration
+security:
+  secret_key: "dev-secret-key-change-in-production"
+  algorithm: "HS256"
+  access_token_expire_minutes: 30
+
+# CORS Configuration
+cors_origins:
+  - "http://localhost:3000"
+  - "http://localhost:5173"
+  - "http://localhost:8080"
+
+# Path Configuration
+paths:
+  data_dir: "./data"
+  models_dir: "./models"
+  temp_dir: "./temp"
+
+# Feature Flags
+features:
+  hot_reload: true
+  enable_authentication: true
+  enable_monitoring: true
+  enable_gpu_acceleration: false
+  enable_test_data: true  # Load test data on startup
+  max_concurrent_tasks: 4
+
+# Test Data Configuration
+test_data:
+  enabled: true
+  sample_images: 10
+  sample_algorithms: 3
+  sample_tasks: 20

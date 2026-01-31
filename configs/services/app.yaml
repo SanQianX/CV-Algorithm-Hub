@@ -1,0 +1,76 @@
+# Service Configuration Templates
+
+# API Gateway Service
+api_gateway:
+  host: "0.0.0.0"
+  port: 8080
+  workers: 4
+  timeout: 300
+  rate_limit:
+    enabled: true
+    requests_per_minute: 1000
+
+# Algorithm Manager Service
+algorithm_manager:
+  host: "0.0.0.0"
+  port: 8081
+  workers: 2
+  storage_backend: "local"  # local, s3, minio
+  max_algorithms: 100
+
+# Task Orchestrator Service
+task_orchestrator:
+  host: "0.0.0.0"
+  port: 8082
+  workers: 4
+  queue_backend: "redis"  # redis, rabbitmq
+  max_concurrent_tasks: 16
+  task_timeout: 3600  # 1 hour
+
+# Algorithm Engine Service
+algorithm_engine:
+  host: "0.0.0.0"
+  port: 8083
+  workers: 2
+  gpu:
+    enabled: true
+    device_ids: [0, 1]  # Multi-GPU support
+    max_memory_per_task: 4096  # MB
+  sandbox:
+    enabled: true
+    memory_limit: "8g"
+    cpu_limit: 4.0
+    network_disabled: false
+
+# Data Manager Service
+data_manager:
+  host: "0.0.0.0"
+  port: 8084
+  workers: 2
+  storage:
+    backend: "local"  # local, s3, minio
+    base_path: "./data"
+    max_file_size: 104857600  # 100MB
+  formats:
+    supported:
+      - "image/jpeg"
+      - "image/png"
+      - "image/tiff"
+      - "application/zip"
+      - "video/mp4"
+
+# Monitoring Service
+monitoring:
+  host: "0.0.0.0"
+  port: 8085
+  workers: 2
+  metrics:
+    enabled: true
+    export_interval: 15  # seconds
+  dashboard:
+    enabled: true
+    username: "${MONITORING_USER}"
+    password: "${MONITORING_PASSWORD}"
+  alerting:
+    enabled: true
+    webhook_url: "${ALERT_WEBHOOK_URL}"

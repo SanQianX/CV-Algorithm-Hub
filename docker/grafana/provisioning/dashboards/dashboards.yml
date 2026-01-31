@@ -1,0 +1,10 @@
+# Grafana Dashboards Provisioning
+apiVersion: 1
+
+providers:
+  - name: 'CV Algorithm Hub'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
