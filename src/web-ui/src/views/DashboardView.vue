@@ -37,6 +37,10 @@ const goToDatabaseManager = () => {
   router.push('/database')
 }
 
+const goToFinanceManager = () => {
+  router.push('/db-manager/finance')
+}
+
 const goToDataExplorer = () => {
   router.push('/explorer')
 }
@@ -160,6 +164,14 @@ onMounted(() => {
                   <path d="M4 7h16M7 12h10M7 17h10"/>
                 </svg>
                 数据库管理
+              </button>
+              <button class="action-btn finance" @click="goToFinanceManager">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                  <path d="M2 12l10 5 10-5"/>
+                </svg>
+                金融数据管理
               </button>
               <button class="action-btn explorer" @click="goToDataExplorer">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -647,6 +659,16 @@ onMounted(() => {
 .action-btn.database:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+.action-btn.finance {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+.action-btn.finance:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
 }
 
 .action-btn.explorer {

@@ -58,6 +58,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/db-manager/finance',
+      name: 'finance-manager',
+      component: () => import('../views/FinanceDataManagerView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/explorer',
       name: 'explorer',
       component: () => import('../views/DataExplorerView.vue'),
