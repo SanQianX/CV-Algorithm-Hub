@@ -57,40 +57,6 @@ const getAuthHeaders = () => {
   }
 }
 
-// 格式化时间范围
-const formatDateRange = (startDate: string, endDate: string): string => {
-  const start = new Date(startDate)
-  const end = new Date(endDate)
-  const format = (date: Date) => {
-    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
-  }
-  return `${format(start)} - ${format(end)}`
-}
-
-// 格式化更新时间
-const formatUpdateTime = (dateStr: string): string => {
-  const date = new Date(dateStr)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
-}
-
-// 格式化内存大小
-const formatMemorySize = (bytes: number): string => {
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(2)} KB`
-  } else if (bytes < 1024 * 1024 * 1024) {
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-  } else {
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
-  }
-}
-
 // 获取类型标签文本
 const getTypeLabel = (type: string) => {
   return type === 'stock' ? '股票' : '基金'
@@ -132,26 +98,36 @@ const refreshData = async () => {
   isRefreshing.value = false
 }
 
-// 获取数据（占位函数，待任务2实现后端API）
+// 获取数据
 const fetchData = async () => {
   isLoading.value = true
   try {
-    // TODO: 任务2实现后调用真实API
-    // const res = await fetch(`${API_BASE}/api/v1/db-manager/finance/all`, {
-    //   headers: getAuthHeaders()
-    // })
-    // if (res.ok) {
-    //   const data = await res.json()
-    //   financeData.value = data.items || []
-    // }
+    const res = await fetch(`${API_BASE}/api/v1/db-manager/finance/all`, {
+      headers: getAuthHeaders()
+    })
 
-    // 临时模拟数据
-    await new Promise(resolve => setTimeout(resolve, 500))
+    if (res.ok) {
+      const data = await res.json()
+      financeData.value = data.items || []
+      filteredData.value = [...financeData.value]
+
+      // 更新统计数据
+      stats.value.total = data.total || 0
+      stats.value.stockCount = data.stockCount || 0
+      stats.value.fundCount = data.fundCount || 0
+
+      showMessage('数据加载成功', 'success')
+    } else {
+      const err = await res.json()
+      showMessage(err.detail || '加载数据失败', 'error')
+      financeData.value = []
+      filteredData.value = []
+    }
+  } catch (e) {
+    console.error('加载数据失败:', e)
+    showMessage('加载数据失败', 'error')
     financeData.value = []
     filteredData.value = []
-    showMessage('数据加载成功', 'success')
-  } catch (e) {
-    showMessage('加载数据失败', 'error')
   } finally {
     isLoading.value = false
   }

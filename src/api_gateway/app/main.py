@@ -9,6 +9,7 @@ from src.api_gateway.routes.auth import router as auth_router
 from src.api_gateway.routes.monitor import router as monitor_router
 from src.api_gateway.routes.db_manager import router as db_manager_router
 from src.api_gateway.routes.finance import router as finance_router
+from src.api_gateway.routes.finance_manager import router as finance_manager_router
 from src.api_gateway.routes.data_explorer import router as data_explorer_router
 from src.api_gateway.db.database import init_db
 
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
     app.include_router(monitor_router)
     app.include_router(db_manager_router)
     app.include_router(finance_router)
+    app.include_router(finance_manager_router)
     app.include_router(data_explorer_router)
 
     return app
