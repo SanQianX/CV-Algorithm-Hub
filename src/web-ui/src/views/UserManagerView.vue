@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import ModeToggle from '@/components/ui/ModeToggle.vue'
 
@@ -11,8 +11,13 @@ const API_BASE = ''
 // 状态变量
 const isLoading = ref(false)
 const isRefreshing = ref(false)
+const isSubmitting = ref(false)
 const message = ref('')
 const messageType = ref<'success' | 'error'>('success')
+
+// 模态框状态
+const showAddModal = ref(false)
+const showEditModal = ref(false)
 
 // 用户列表数据
 const users = ref<Array<{
@@ -23,12 +28,38 @@ const users = ref<Array<{
   updated_at: string
 }>>([])
 
+// 当前编辑的用户
+const editingUser = ref<{ id: string; username: string; email: string } | null>(null)
+
 // 分页
 const pagination = ref({
   page: 1,
   pageSize: 20,
   total: 0,
   totalPages: 0
+})
+
+// 添加用户表单
+const addForm = reactive({
+  username: '',
+  email: '',
+  password: '',
+  confirmPassword: ''
+})
+
+// 编辑用户表单
+const editForm = reactive({
+  username: '',
+  email: '',
+  password: ''
+})
+
+// 表单验证错误
+const formErrors = reactive({
+  username: '',
+  email: '',
+  password: '',
+  confirmPassword: ''
 })
 
 // 显示消息
@@ -62,36 +93,29 @@ const formatDateTime = (dateStr: string): string => {
   })
 }
 
-// 获取用户列表（占位函数，待任务7实现后端API）
+// 获取用户列表
 const fetchUsers = async (page = 1) => {
   isLoading.value = true
   try {
-    // TODO: 任务7实现后调用真实API
-    // const res = await fetch(`${API_BASE}/api/v1/db-manager/users?page=${page}&page_size=${pagination.value.pageSize}`, {
-    //   headers: getAuthHeaders()
-    // })
-    // if (res.ok) {
-    //   const data = await res.json()
-    //   users.value = data.items || []
-    //   pagination.value = {
-    //     page: data.page,
-    //     pageSize: data.page_size,
-    //     total: data.total,
-    //     totalPages: data.total_pages
-    //   }
-    // }
+    const res = await fetch(`${API_BASE}/api/v1/db-manager/users?page=${page}&page_size=${pagination.value.pageSize}`, {
+      headers: getAuthHeaders()
+    })
 
-    // 临时模拟数据
-    await new Promise(resolve => setTimeout(resolve, 500))
-    users.value = []
-    pagination.value = {
-      page: 1,
-      pageSize: 20,
-      total: 0,
-      totalPages: 0
+    if (res.ok) {
+      const data = await res.json()
+      users.value = data.items || []
+      pagination.value = {
+        page: data.page,
+        pageSize: data.page_size,
+        total: data.total,
+        totalPages: data.total_pages
+      }
+    } else {
+      const err = await res.json()
+      showMessage(err.detail || '加载用户列表失败', 'error')
     }
-    showMessage('用户列表加载成功', 'success')
   } catch (e) {
+    console.error('加载用户列表失败:', e)
     showMessage('加载用户列表失败', 'error')
   } finally {
     isLoading.value = false
@@ -105,19 +129,219 @@ const refreshData = async () => {
   isRefreshing.value = false
 }
 
-// 删除用户（占位函数，待任务9实现）
+// 验证添加用户表单
+const validateAddForm = (): boolean => {
+  formErrors.username = ''
+  formErrors.email = ''
+  formErrors.password = ''
+  formErrors.confirmPassword = ''
+
+  let isValid = true
+
+  if (!addForm.username || addForm.username.length < 3) {
+    formErrors.username = '用户名长度至少为3个字符'
+    isValid = false
+  } else if (addForm.username.length > 20) {
+    formErrors.username = '用户名长度不能超过20个字符'
+    isValid = false
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!addForm.email || !emailRegex.test(addForm.email)) {
+    formErrors.email = '请输入有效的邮箱地址'
+    isValid = false
+  }
+
+  if (!addForm.password || addForm.password.length < 6) {
+    formErrors.password = '密码长度至少为6个字符'
+    isValid = false
+  }
+
+  if (addForm.password !== addForm.confirmPassword) {
+    formErrors.confirmPassword = '两次输入的密码不一致'
+    isValid = false
+  }
+
+  return isValid
+}
+
+// 验证编辑用户表单
+const validateEditForm = (): boolean => {
+  formErrors.username = ''
+  formErrors.email = ''
+  formErrors.password = ''
+
+  let isValid = true
+
+  if (editForm.username) {
+    if (editForm.username.length < 3) {
+      formErrors.username = '用户名长度至少为3个字符'
+      isValid = false
+    } else if (editForm.username.length > 20) {
+      formErrors.username = '用户名长度不能超过20个字符'
+      isValid = false
+    }
+  }
+
+  if (editForm.email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(editForm.email)) {
+      formErrors.email = '请输入有效的邮箱地址'
+      isValid = false
+    }
+  }
+
+  if (editForm.password && editForm.password.length < 6) {
+    formErrors.password = '密码长度至少为6个字符'
+    isValid = false
+  }
+
+  return isValid
+}
+
+// 添加用户
+const addUser = async () => {
+  if (!validateAddForm()) {
+    return
+  }
+
+  isSubmitting.value = true
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/db-manager/users`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        username: addForm.username,
+        email: addForm.email,
+        password: addForm.password
+      })
+    })
+
+    if (res.ok) {
+      showMessage('添加用户成功', 'success')
+      closeAddModal()
+      await fetchUsers(pagination.value.page)
+    } else {
+      const err = await res.json()
+      showMessage(err.detail || '添加用户失败', 'error')
+    }
+  } catch (e) {
+    console.error('添加用户失败:', e)
+    showMessage('添加用户失败', 'error')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+// 删除用户
 const deleteUser = async (userId: string, username: string) => {
   if (!confirm(`确定要删除用户 "${username}" 吗？此操作不可恢复！`)) {
     return
   }
-  // TODO: 任务9实现
-  showMessage('删除用户功能待实现', 'error')
+
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/db-manager/users/${userId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    })
+
+    if (res.ok) {
+      const result = await res.json()
+      showMessage(result.message || '删除用户成功', 'success')
+      await fetchUsers(pagination.value.page)
+    } else {
+      const err = await res.json()
+      showMessage(err.detail || '删除用户失败', 'error')
+    }
+  } catch (e) {
+    console.error('删除用户失败:', e)
+    showMessage('删除用户失败', 'error')
+  }
 }
 
-// 编辑用户（占位函数，待任务10实现）
-const editUser = (userId: string) => {
-  // TODO: 任务10实现
-  showMessage('编辑用户功能待实现', 'error')
+// 打开编辑用户模态框
+const openEditModal = async (userId: string) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/db-manager/users/${userId}`, {
+      headers: getAuthHeaders()
+    })
+
+    if (res.ok) {
+      const user = await res.json()
+      editingUser.value = user
+      editForm.username = user.username
+      editForm.email = user.email
+      editForm.password = ''
+      showEditModal.value = true
+    } else {
+      showMessage('获取用户信息失败', 'error')
+    }
+  } catch (e) {
+    console.error('获取用户信息失败:', e)
+    showMessage('获取用户信息失败', 'error')
+  }
+}
+
+// 更新用户
+const updateUser = async () => {
+  if (!editingUser.value) return
+
+  if (!validateEditForm()) {
+    return
+  }
+
+  isSubmitting.value = true
+  try {
+    const body: any = {}
+    if (editForm.username) body.username = editForm.username
+    if (editForm.email) body.email = editForm.email
+    if (editForm.password) body.password = editForm.password
+
+    const res = await fetch(`${API_BASE}/api/v1/db-manager/users/${editingUser.value.id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body)
+    })
+
+    if (res.ok) {
+      showMessage('更新用户成功', 'success')
+      closeEditModal()
+      await fetchUsers(pagination.value.page)
+    } else {
+      const err = await res.json()
+      showMessage(err.detail || '更新用户失败', 'error')
+    }
+  } catch (e) {
+    console.error('更新用户失败:', e)
+    showMessage('更新用户失败', 'error')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+// 关闭添加模态框
+const closeAddModal = () => {
+  showAddModal.value = false
+  addForm.username = ''
+  addForm.email = ''
+  addForm.password = ''
+  addForm.confirmPassword = ''
+  formErrors.username = ''
+  formErrors.email = ''
+  formErrors.password = ''
+  formErrors.confirmPassword = ''
+}
+
+// 关闭编辑模态框
+const closeEditModal = () => {
+  showEditModal.value = false
+  editingUser.value = null
+  editForm.username = ''
+  editForm.email = ''
+  editForm.password = ''
+  formErrors.username = ''
+  formErrors.email = ''
+  formErrors.password = ''
 }
 
 // 页面加载
@@ -157,7 +381,7 @@ onMounted(() => {
             <span class="user-count">共 {{ pagination.total }} 个用户</span>
           </div>
           <div class="toolbar-right">
-            <button class="action-btn add" disabled title="添加用户功能待实现（任务8）">
+            <button class="action-btn add" @click="showAddModal = true">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
               </svg>
@@ -207,7 +431,7 @@ onMounted(() => {
                 <td class="date-cell">{{ formatDateTime(user.created_at) }}</td>
                 <td class="date-cell">{{ formatDateTime(user.updated_at) }}</td>
                 <td class="action-cell">
-                  <button class="icon-btn edit" @click="editUser(user.id)" title="编辑用户">
+                  <button class="icon-btn edit" @click="openEditModal(user.id)" title="编辑用户">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                     </svg>
@@ -245,6 +469,111 @@ onMounted(() => {
         </div>
       </div>
     </main>
+
+    <!-- 添加用户模态框 -->
+    <div v-if="showAddModal" class="modal-overlay" @click.self="closeAddModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>添加用户</h3>
+          <button class="close-btn" @click="closeAddModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="addUser">
+            <div class="form-group" :class="{ 'has-error': formErrors.username }">
+              <label>用户名</label>
+              <input
+                v-model="addForm.username"
+                type="text"
+                placeholder="请输入用户名（3-20个字符）"
+                maxlength="20"
+              />
+              <span v-if="formErrors.username" class="error-text">{{ formErrors.username }}</span>
+            </div>
+            <div class="form-group" :class="{ 'has-error': formErrors.email }">
+              <label>邮箱</label>
+              <input
+                v-model="addForm.email"
+                type="email"
+                placeholder="请输入邮箱地址"
+              />
+              <span v-if="formErrors.email" class="error-text">{{ formErrors.email }}</span>
+            </div>
+            <div class="form-group" :class="{ 'has-error': formErrors.password }">
+              <label>密码</label>
+              <input
+                v-model="addForm.password"
+                type="password"
+                placeholder="请输入密码（至少6个字符）"
+              />
+              <span v-if="formErrors.password" class="error-text">{{ formErrors.password }}</span>
+            </div>
+            <div class="form-group" :class="{ 'has-error': formErrors.confirmPassword }">
+              <label>确认密码</label>
+              <input
+                v-model="addForm.confirmPassword"
+                type="password"
+                placeholder="请再次输入密码"
+              />
+              <span v-if="formErrors.confirmPassword" class="error-text">{{ formErrors.confirmPassword }}</span>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="cancel-btn" @click="closeAddModal">取消</button>
+              <button type="submit" class="submit-btn" :disabled="isSubmitting">
+                {{ isSubmitting ? '提交中...' : '添加' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑用户模态框 -->
+    <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>编辑用户</h3>
+          <button class="close-btn" @click="closeEditModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="updateUser">
+            <div class="form-group" :class="{ 'has-error': formErrors.username }">
+              <label>用户名</label>
+              <input
+                v-model="editForm.username"
+                type="text"
+                placeholder="留空表示不修改"
+                maxlength="20"
+              />
+              <span v-if="formErrors.username" class="error-text">{{ formErrors.username }}</span>
+            </div>
+            <div class="form-group" :class="{ 'has-error': formErrors.email }">
+              <label>邮箱</label>
+              <input
+                v-model="editForm.email"
+                type="email"
+                placeholder="留空表示不修改"
+              />
+              <span v-if="formErrors.email" class="error-text">{{ formErrors.email }}</span>
+            </div>
+            <div class="form-group" :class="{ 'has-error': formErrors.password }">
+              <label>新密码</label>
+              <input
+                v-model="editForm.password"
+                type="password"
+                placeholder="留空表示不修改密码"
+              />
+              <span v-if="formErrors.password" class="error-text">{{ formErrors.password }}</span>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="cancel-btn" @click="closeEditModal">取消</button>
+              <button type="submit" class="submit-btn" :disabled="isSubmitting">
+                {{ isSubmitting ? '提交中...' : '保存' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -649,6 +978,169 @@ onMounted(() => {
 
 :global(.dark) .page-info {
   color: #9ca3af;
+}
+
+/* 模态框 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  width: 90%;
+  max-width: 450px;
+  background: white;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+:global(.dark) .modal {
+  background: #1f2937;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+:global(.dark) .modal-header {
+  border-color: #374151;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  color: #1f2937;
+}
+
+:global(.dark) .modal-header h3 {
+  color: #f3f4f6;
+}
+
+.close-btn {
+  font-size: 1.5rem;
+  color: #9ca3af;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  color: #374151;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+:global(.dark) .form-group label {
+  color: #f3f4f6;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  color: #1f2937;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  box-sizing: border-box;
+}
+
+:global(.dark) .form-group input {
+  color: #f3f4f6;
+  background: #374151;
+  border-color: #4b5563;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.form-group.has-error input {
+  border-color: #ef4444;
+}
+
+.error-text {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #ef4444;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+:global(.dark) .modal-actions {
+  border-color: #374151;
+}
+
+.cancel-btn {
+  padding: 0.625rem 1.25rem;
+  font-size: 0.95rem;
+  color: #374151;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+:global(.dark) .cancel-btn {
+  color: #f3f4f6;
+  background: #1f2937;
+  border-color: #4b5563;
+}
+
+.submit-btn {
+  padding: 0.625rem 1.25rem;
+  font-size: 0.95rem;
+  color: white;
+  background: #3b82f6;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
