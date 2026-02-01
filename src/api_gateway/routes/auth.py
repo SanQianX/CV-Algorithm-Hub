@@ -65,7 +65,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码"""
     import hashlib
     return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
-    """Create JWT token"""
+
+
+def create_token(user_id: str) -> str:
     payload = {
         "sub": user_id,
         "exp": datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes),
