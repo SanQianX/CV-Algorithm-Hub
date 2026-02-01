@@ -80,7 +80,7 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: true }
     } catch (error: any) {
       error.value = error.response?.data?.message || '登录失败'
-      return { success: false, error: error.value }
+      return { success: false, error: error.response?.data?.message || '登录失败' }
     } finally {
       isLoading.value = false
     }
@@ -112,7 +112,7 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: true }
     } catch (error: any) {
       error.value = error.response?.data?.message || '注册失败'
-      return { success: false, error: error.value }
+      return { success: false, error: error.response?.data?.message || '注册失败' }
     } finally {
       isLoading.value = false
     }

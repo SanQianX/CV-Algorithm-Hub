@@ -55,7 +55,16 @@ class ProfileResponse(BaseModel):
     data: Optional[dict] = None
 
 
-def create_token(user_id: str) -> str:
+def hash_password(password: str) -> str:
+    """简单密码哈希（生产环境应使用 bcrypt）"""
+    import hashlib
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """验证密码"""
+    import hashlib
+    return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
     """Create JWT token"""
     payload = {
         "sub": user_id,
@@ -112,7 +121,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         id=user_id,
         username=request.username,
         email=request.email,
-        password=request.password,  # In production, hash this!
+        password=hash_password(request.password),
         created_at=now
     )
 
@@ -147,7 +156,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         )
 
     # Check password
-    if user.password != request.password:
+    if not verify_password(request.password, user.password):
         return LoginResponse(
             success=False,
             message="邮箱或密码错误",
