@@ -9,6 +9,28 @@ const router = useRouter()
 const isLoggingOut = ref(false)
 const showUserMenu = ref(false)
 
+// 功能模块列表
+const modules = ref([
+  {
+    id: 'stock-monitor',
+    name: '股票监视系统',
+    description: '实时监控股票数据，分析市场趋势',
+    icon: 'chart',
+    route: '/stock-monitor',
+    color: '#10b981'
+  },
+  {
+    id: 'database',
+    name: '数据库管理系统',
+    description: '管理金融数据和用户信息',
+    icon: 'database',
+    route: '/database',
+    color: '#8b5cf6'
+  }
+])
+
+const activeModule = ref('stock-monitor')
+
 const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value
 }
@@ -29,20 +51,9 @@ const goToSettings = () => {
   router.push('/settings')
 }
 
-const goToStockMonitor = () => {
-  router.push('/stock-monitor')
-}
-
-const goToDatabaseManager = () => {
-  router.push('/database')
-}
-
-const goToFinanceManager = () => {
-  router.push('/db-manager/finance')
-}
-
-const goToUserManager = () => {
-  router.push('/db-manager/users')
+const goToModule = (module: typeof modules.value[0]) => {
+  activeModule.value = module.id
+  router.push(module.route)
 }
 
 const goToDataExplorer = () => {
@@ -110,86 +121,43 @@ onMounted(() => {
           <p>您已成功登录到 CV Algorithm Hub</p>
         </div>
 
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-icon algorithms">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                <path d="M2 17l10 5 10-5"/>
-                <path d="M2 12l10 5 10-5"/>
-              </svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value">0</span>
-              <span class="stat-label">算法数量</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon tasks">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 11l3 3L22 4"/>
-                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-              </svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value">0</span>
-              <span class="stat-label">完成任务</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon collections">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-              </svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value">0</span>
-              <span class="stat-label">收藏夹</span>
+        <!-- 功能模块区域 -->
+        <section class="module-section">
+          <h2 class="section-title">功能模块</h2>
+          <div class="module-grid">
+            <div
+              v-for="module in modules"
+              :key="module.id"
+              :class="['module-card', { active: activeModule === module.id }]"
+              @click="goToModule(module)"
+            >
+              <div class="module-icon" :style="{ background: module.color + '20', color: module.color }">
+                <svg v-if="module.icon === 'chart'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 3v18h18"/>
+                  <path d="M18 9l-5 5-4-4-3 3"/>
+                </svg>
+                <svg v-else-if="module.icon === 'database'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z"/>
+                  <path d="M4 7h16M7 12h10M7 17h10"/>
+                </svg>
+              </div>
+              <div class="module-info">
+                <h3 class="module-name">{{ module.name }}</h3>
+                <p class="module-description">{{ module.description }}</p>
+              </div>
+              <div class="module-arrow">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
         <div class="content-grid">
           <div class="section-card">
             <h3>快捷操作</h3>
             <div class="quick-actions">
-              <button class="action-btn stock-monitor" @click="goToStockMonitor">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 3v18h18"/>
-                  <path d="M18 9l-5 5-4-4-3 3"/>
-                </svg>
-                股票监视系统
-              </button>
-              <button class="action-btn database" @click="goToDatabaseManager">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z"/>
-                  <path d="M4 7h16M7 12h10M7 17h10"/>
-                </svg>
-                数据库管理
-              </button>
-              <button class="action-btn finance" @click="goToFinanceManager">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                  <path d="M2 17l10 5 10-5"/>
-                  <path d="M2 12l10 5 10-5"/>
-                </svg>
-                金融数据管理
-              </button>
-              <button class="action-btn users" @click="goToUserManager">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
-                </svg>
-                用户信息管理
-              </button>
-              <button class="action-btn explorer" @click="goToDataExplorer">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
-                  <path d="M8 12h8M8 16h4"/>
-                </svg>
-                数据浏览器
-              </button>
               <button class="action-btn primary">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 5v14M5 12h14"/>
@@ -203,10 +171,61 @@ onMounted(() => {
                 </svg>
                 浏览算法
               </button>
+              <button class="action-btn explorer" @click="goToDataExplorer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                  <path d="M8 12h8M8 16h4"/>
+                </svg>
+                数据浏览器
+              </button>
             </div>
           </div>
 
           <div class="section-card">
+            <h3>统计概览</h3>
+            <div class="stats-grid-small">
+              <div class="stat-item">
+                <div class="stat-icon algorithms">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                  </svg>
+                </div>
+                <div class="stat-content">
+                  <span class="stat-value">0</span>
+                  <span class="stat-label">算法数量</span>
+                </div>
+              </div>
+
+              <div class="stat-item">
+                <div class="stat-icon tasks">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 11l3 3L22 4"/>
+                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                  </svg>
+                </div>
+                <div class="stat-content">
+                  <span class="stat-value">0</span>
+                  <span class="stat-label">完成任务</span>
+                </div>
+              </div>
+
+              <div class="stat-item">
+                <div class="stat-icon collections">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                  </svg>
+                </div>
+                <div class="stat-content">
+                  <span class="stat-value">0</span>
+                  <span class="stat-label">收藏夹</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-card full-width">
             <h3>最近活动</h3>
             <div class="empty-state">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -494,14 +513,29 @@ onMounted(() => {
   color: #9ca3af;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.5rem;
+/* 功能模块区域 */
+.module-section {
   margin-bottom: 2rem;
 }
 
-.stat-card {
+.section-title {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+:global(.dark) .section-title {
+  color: #f3f4f6;
+}
+
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.module-card {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -509,68 +543,93 @@ onMounted(() => {
   background: white;
   border-radius: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
 }
 
-:global(.dark) .stat-card {
+:global(.dark) .module-card {
   background: #1f2937;
 }
 
-.stat-icon {
+.module-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.module-card.active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+:global(.dark) .module-card.active {
+  background: #1e3a5f;
+}
+
+.module-icon {
   width: 3.5rem;
   height: 3.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 0.75rem;
+  flex-shrink: 0;
 }
 
-.stat-icon svg {
+.module-icon svg {
   width: 1.75rem;
   height: 1.75rem;
 }
 
-.stat-icon.algorithms {
-  background: #dbeafe;
-  color: #2563eb;
+.module-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.stat-icon.tasks {
-  background: #dcfce7;
-  color: #16a34a;
-}
-
-.stat-icon.collections {
-  background: #fef3c7;
-  color: #d97706;
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-value {
-  font-size: 1.75rem;
-  font-weight: 700;
+.module-name {
+  margin: 0 0 0.25rem;
+  font-size: 1.125rem;
+  font-weight: 600;
   color: #1f2937;
 }
 
-:global(.dark) .stat-value {
+:global(.dark) .module-name {
   color: #f3f4f6;
 }
 
-.stat-label {
+.module-description {
+  margin: 0;
   font-size: 0.875rem;
   color: #6b7280;
 }
 
-:global(.dark) .stat-label {
+:global(.dark) .module-description {
   color: #9ca3af;
 }
 
+.module-arrow {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  transition: transform 0.3s ease;
+}
+
+.module-card:hover .module-arrow {
+  transform: translateX(4px);
+}
+
+.module-arrow svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* 内容网格 */
 .content-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
 }
 
@@ -594,6 +653,10 @@ onMounted(() => {
 
 :global(.dark) .section-card h3 {
   color: #f3f4f6;
+}
+
+.section-card.full-width {
+  grid-column: 1 / -1;
 }
 
 .quick-actions {
@@ -651,46 +714,6 @@ onMounted(() => {
   background: #4b5563;
 }
 
-.action-btn.stock-monitor {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-}
-
-.action-btn.stock-monitor:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-}
-
-.action-btn.database {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  color: white;
-}
-
-.action-btn.database:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
-}
-
-.action-btn.finance {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: white;
-}
-
-.action-btn.finance:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-}
-
-.action-btn.users {
-  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
-  color: white;
-}
-
-.action-btn.users:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
-}
-
 .action-btn.explorer {
   background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
   color: white;
@@ -699,6 +722,79 @@ onMounted(() => {
 .action-btn.explorer:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+}
+
+/* 统计概览 */
+.stats-grid-small {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+}
+
+:global(.dark) .stat-item {
+  background: #374151;
+}
+
+.stat-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+}
+
+.stat-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.stat-icon.algorithms {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.stat-icon.tasks {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.stat-icon.collections {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+:global(.dark) .stat-value {
+  color: #f3f4f6;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+:global(.dark) .stat-label {
+  color: #9ca3af;
 }
 
 .empty-state {
@@ -719,5 +815,15 @@ onMounted(() => {
 .empty-state p {
   margin: 0;
   font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
