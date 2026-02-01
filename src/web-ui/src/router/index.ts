@@ -64,6 +64,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/db-manager/users',
+      name: 'user-manager',
+      component: () => import('../views/UserManagerView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/explorer',
       name: 'explorer',
       component: () => import('../views/DataExplorerView.vue'),
